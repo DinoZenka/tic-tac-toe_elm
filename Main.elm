@@ -33,7 +33,8 @@ initialModel =
     { board = Dict.empty, currentPlayer = X, gameState = Started }
 
 type Msg
-    = SquareClick (Int,Int)
+    = SquareClick (Int,Int) 
+    | Reset 
 
 changePlayer : Player -> Player
 changePlayer player = 
@@ -45,7 +46,13 @@ update : Msg -> Model -> Model
 update msg model =
   case msg of
     SquareClick (x,y) -> 
+
+        if(isEmpty model (x,y))
+        then
          { model | board = Dict.insert (x,y) model.currentPlayer model.board, currentPlayer = (changePlayer model.currentPlayer) }
+        else
+         model
+    Reset -> initialModel
 
 
 -- next 8 functions are needed for the view 
@@ -127,6 +134,12 @@ classStatus =
      , style "margin" "10px"
      , style "margin-left" "0px"
   ]
+resetStyle = 
+  [
+      style "margin" "10px 100px"
+    , style "padding" "5px 30px"
+    , onClick Reset
+  ]
 
 
 view : Model -> Html Msg
@@ -134,6 +147,7 @@ view model =
   div classMain [
         div classStatus [ text <| viewStatus model ]
       , div [] <| viewBoard model
+      , button resetStyle [ text "Reset" ]
    ]      
 
 -- View ends here
@@ -201,7 +215,7 @@ something m =
     Just _ -> True
     Nothing -> False  
 
---checkWinner: Board -> Maybe Player
+-- checkWinner: Board -> Maybe Player
 -- the result can be Just X, Just O if the winner is X or O
 -- if Nothing the game continues
 --checkWinner board = 
