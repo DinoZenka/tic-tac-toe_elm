@@ -44,8 +44,9 @@ changePlayer player =
 update : Msg -> Model -> Model
 update msg model =
   case msg of
-    SquareClick (x,y) ->
-       { model | board = Dict.insert (x,y) model.currentPlayer model.board }
+    SquareClick (x,y) -> 
+         { model | board = Dict.insert (x,y) model.currentPlayer model.board, currentPlayer = (changePlayer model.currentPlayer) }
+
 
 -- next 8 functions are needed for the view 
 
@@ -91,30 +92,38 @@ classMain =
   [
        style "font-family" "verdana,arial,serif"
      , style "color" "rgb(55,55,55)"
+     , style "margin-top" "5%"
+     , style "margin-left" "30vw"
+     , style "align-items" "center"
   ]
 
 classRow =
   [
        style "display" "flex"
      , style "flex-direction" "row"
+     , style "align-items" "center"
+     
   ]
 
 classSquare = 
   [
-       style "border" "1px solid rgb(125,125,125)"
-     , style "width" "70px"
-     , style "height" "70px"
-     , style "margin-right" "-1px"
-     , style "margin-top" "-1px"
-     , style "font-size" "55px"
-     , style "font-weight" "bold"
+       style "border" "2px solid white"
+     , style "width" "100px"
+     , style "height" "100px"
+     , style "font-size" "80px"
+     , style "font-weight" "normal"
+     , style "color" "white"
      , style "text-align" "center"
-       
+     , style "vertical-aligh" "middle"
+     , style "background-color" "grey"
+     , style "cursor" "pointer"
+     , style "align-items" "center"
+
   ]
 
 classStatus =
   [
-       style "font-size" "20px"
+       style "font-size" "30px"
      , style "margin" "10px"
      , style "margin-left" "0px"
   ]
@@ -179,6 +188,12 @@ maybeJoin mm =
   case mm of
     Nothing -> Nothing
     Just m -> m
+
+isEmpty :Model -> (Int,Int) -> Bool
+isEmpty model (x,y) =
+  case Dict.get (x,y) model.board of
+    Just _ -> False
+    Nothing -> True
 
 something : Maybe a -> Bool
 something m = 
