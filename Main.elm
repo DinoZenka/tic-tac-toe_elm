@@ -220,23 +220,12 @@ allEqual board l =
             else 
               Nothing
 
-maybeJoin : Maybe (Maybe a) -> Maybe a
-maybeJoin mm = 
-  case mm of
-    Nothing -> Nothing
-    Just m -> m
 
 isEmpty :Model -> (Int,Int) -> Bool
 isEmpty model (x,y) =
   case Dict.get (x,y) model.board of
     Just _ -> False
     Nothing -> True
-
-something : Maybe a -> Bool
-something m = 
-  case m of
-    Just _ -> True
-    Nothing -> False  
 
 
 checkWinner: Board -> Maybe Player
