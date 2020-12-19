@@ -46,12 +46,32 @@ update : Msg -> Model -> Model
 update msg model =
   case msg of
     SquareClick (x,y) -> 
+      if( model.gameState /= Started)
+      then
+        model
+      else
+        let 
+          newBoard = Dict.insert (x,y) model.currentPlayer model.board
+        in
+          if(isEmpty model (x,y))
+          then
+          { 
+            model 
+            |currentPlayer = (changePlayer model.currentPlayer)
+            ,board = newBoard
+            , gameState = 
+                if(Dict.size model.board < (boardSize * boardSize - 1) && (checkWinner newBoard) == Nothing)
+                then 
+                  Started
+                else
+                  case checkWinner newBoard of
+                  Just X -> Finished (Just X)
+                  Just O -> Finished (Just O)
+                  _ -> Finished (Nothing)
+          }
+          else
+            model
 
-        if(isEmpty model (x,y))
-        then
-         { model | board = Dict.insert (x,y) model.currentPlayer model.board, currentPlayer = (changePlayer model.currentPlayer) }
-        else
-         model
     Reset -> initialModel
 
 
@@ -174,6 +194,7 @@ diagonal2 =
    List.range 0 (boardSize-1) 
    |> List.map (\i -> (i,boardSize-1-i)) 
 
+
 winPositions : List (List (Int,Int)) 
 winPositions =
    (
@@ -188,14 +209,16 @@ winPositions =
    ++
    [diagonal1,diagonal2]
 
--- checks that all the elements of the list are the same and returns this value
--- if different - returns Nothing
-
-allEqual : List a -> Maybe a
-allEqual l = 
+allEqual : Board -> List (Int,Int) -> Maybe Player
+allEqual board l = 
   case l of
     [] -> Nothing
-    h::t -> if List.all (\x -> x == h) t then Just h else Nothing
+    h::t -> if 
+              List.all (\x -> Dict.get h board == Dict.get x board) t 
+            then 
+              Dict.get h board
+            else 
+              Nothing
 
 maybeJoin : Maybe (Maybe a) -> Maybe a
 maybeJoin mm = 
@@ -215,7 +238,13 @@ something m =
     Just _ -> True
     Nothing -> False  
 
--- checkWinner: Board -> Maybe Player
+
+checkWinner: Board -> Maybe Player
 -- the result can be Just X, Just O if the winner is X or O
 -- if Nothing the game continues
---checkWinner board = 
+checkWinner board = 
+    Maybe.withDefault Nothing (List.head <| 
+                              (List.filter (\x->case x of
+                                                Just _ -> True
+                                                _ -> False) 
+                                           (List.map (allEqual board) winPositions)))
