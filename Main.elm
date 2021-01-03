@@ -10,8 +10,6 @@ import Dict exposing (Dict)
 
 main = Browser.sandbox { init = initialModel, view = view, update = update }
 
-boardSize = 3
-
 type Player = X | O
 
 type GameState = Started | Finished (Maybe Player)
@@ -26,15 +24,17 @@ type alias Board = Dict (Int,Int) Player
 -- Dict stored only used cells
 
 type alias Model =
-    { board : Board, currentPlayer : Player, gameState : GameState }
+    { board : Board, currentPlayer : Player, gameState : GameState , boardSize : Int}
 
 initialModel : Model
 initialModel =
-    { board = Dict.empty, currentPlayer = X, gameState = Started }
+    { board = Dict.empty, currentPlayer = X, gameState = Started, boardSize = 3 }
 
 type Msg
     = SquareClick (Int,Int) 
     | Reset 
+    | AddCell
+    | DecCell
 
 changePlayer : Player -> Player
 changePlayer player = 
@@ -60,11 +60,11 @@ update msg model =
             |currentPlayer = (changePlayer model.currentPlayer)
             ,board = newBoard
             , gameState = 
-                if(Dict.size model.board < (boardSize * boardSize - 1) && (checkWinner newBoard) == Nothing)
+                if(Dict.size model.board < (model.boardSize * model.boardSize - 1) && (checkWinner newBoard model) == Nothing)
                 then 
                   Started
                 else
-                  case checkWinner newBoard of
+                  case checkWinner newBoard model of
                   Just X -> Finished (Just X)
                   Just O -> Finished (Just O)
                   _ -> Finished (Nothing)
@@ -73,7 +73,30 @@ update msg model =
             model
 
     Reset -> initialModel
-
+    AddCell -> 
+          let
+            newBoardSize = if model.boardSize > 4
+                           then 
+                              5
+                           else
+                              model.boardSize + 1
+          in 
+            {model| boardSize = newBoardSize
+                  , board = Dict.empty 
+                  , currentPlayer = X 
+                  , gameState = Started}  
+    DecCell ->
+          let 
+            newBoardSize = if model.boardSize < 4
+                           then 
+                              3
+                           else
+                             model.boardSize - 1
+          in 
+            {model| boardSize = newBoardSize
+                  , board = Dict.empty 
+                  , currentPlayer = X 
+                  , gameState = Started}
 
 -- next 8 functions are needed for the view 
 
@@ -101,10 +124,10 @@ viewStatus model =
 
 viewBoard : Model -> List (Html Msg)
 viewBoard model = 
-    List.range 0 (boardSize-1)  
+    List.range 0 (model.boardSize-1)  
     |> List.map (\x ->
        div classRow ( 
-         List.range 0 (boardSize-1) 
+         List.range 0 (model.boardSize-1) 
          |> List.map (\y ->
            div (classSquare ++ [ onClick <| SquareClick (x,y) ]) [
               case Dict.get (x,y) model.board of
@@ -119,8 +142,8 @@ classMain =
   [
        style "font-family" "verdana,arial,serif"
      , style "color" "rgb(55,55,55)"
-     , style "margin-top" "5%"
-     , style "margin-left" "30vw"
+     , style "margin-top" "1%"
+     , style "margin-left" "5vw"
      , style "align-items" "center"
   ]
 
@@ -156,11 +179,24 @@ classStatus =
   ]
 resetStyle = 
   [
-      style "margin" "10px 100px"
+      style "margin-top" "10px"
+    , style "margin-right" "5px"
     , style "padding" "5px 30px"
     , onClick Reset
   ]
 
+incCell = 
+  [
+      style "padding" "5px 25px"
+    , style "margin-right" "5px"
+    , onClick AddCell
+  ]
+decCell =
+  [
+      style "padding" "5px 25px"
+    , style "margin-right" "5px"
+    , onClick DecCell
+  ]
 
 view : Model -> Html Msg
 view model =
@@ -168,6 +204,8 @@ view model =
         div classStatus [ text <| viewStatus model ]
       , div [] <| viewBoard model
       , button resetStyle [ text "Reset" ]
+      , button incCell [text "+"]
+      , button decCell [text "-"]
    ]      
 
 -- View ends here
@@ -175,39 +213,39 @@ view model =
 -- auxiliary functions for determining the winning position (checkWinner) 
 
 -- returns a list of coordinates coordinates of the given string
-row y =  
-   List.range 0 (boardSize-1) 
+row model y =  
+   List.range 0 (model.boardSize - 1) 
    |> List.map (\x -> (x,y))
  
 -- returns a list of coordinates of the fields of the given column
-collumn x =  
-   List.range 0 (boardSize-1) 
+collumn model x =  
+   List.range 0 (model.boardSize - 1) 
    |> List.map (\y -> (x,y)) 
 
 -- returns a list of coordinates of the main diagonal
-diagonal1 = 
-   List.range 0 (boardSize-1) 
+diagonal1 model = 
+   List.range 0 (model.boardSize-1) 
    |> List.map (\i -> (i,i)) 
 
 -- returns a list of coordinates of the side diagonal
-diagonal2 = 
-   List.range 0 (boardSize-1) 
-   |> List.map (\i -> (i,boardSize-1-i)) 
+diagonal2 model = 
+   List.range 0 (model.boardSize-1) 
+   |> List.map (\i -> (i,model.boardSize-1-i)) 
 
 
-winPositions : List (List (Int,Int)) 
-winPositions =
+winPositions : Model -> List (List (Int,Int)) 
+winPositions model =
    (
-     List.range 0 (boardSize-1) 
-     |> List.map (\y -> row y)
+     List.range 0 (model.boardSize-1) 
+     |> List.map (\y -> row model y)
    )
    ++
    (
-     List.range 0 (boardSize-1) 
-     |> List.map (\x -> collumn x)
+     List.range 0 (model.boardSize-1) 
+     |> List.map (\x -> collumn model x)
    )
    ++
-   [diagonal1,diagonal2]
+   [diagonal1 model,diagonal2 model]
 
 allEqual : Board -> List (Int,Int) -> Maybe Player
 allEqual board l = 
@@ -228,12 +266,12 @@ isEmpty model (x,y) =
     Nothing -> True
 
 
-checkWinner: Board -> Maybe Player
+checkWinner: Board -> Model -> Maybe Player
 -- the result can be Just X, Just O if the winner is X or O
 -- if Nothing the game continues
-checkWinner board = 
+checkWinner board model = 
     Maybe.withDefault Nothing (List.head <| 
                               (List.filter (\x->case x of
                                                 Just _ -> True
                                                 _ -> False) 
-                                           (List.map (allEqual board) winPositions)))
+                                           (List.map (allEqual board) (winPositions model))))
